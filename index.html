@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flag Trainer (MC + Levels + 200+)</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Arial; margin: 0; background:#0b1220; color:#e8eefc; }
+    .wrap { max-width: 820px; margin: 0 auto; padding: 18px; }
+    .card { background:#121a2e; border:1px solid #223055; border-radius:16px; padding:16px; box-shadow: 0 8px 24px rgba(0,0,0,.25); }
+    h1 { margin: 0 0 10px; font-size: 22px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .topRow { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin: 10px 0 6px; }
+    select, button { padding:12px 14px; border-radius:12px; border:1px solid #2b3a66; background:#1a2550; color:#e8eefc; font-size:16px; cursor:pointer; }
+    select { background:#0b1220; }
+    button:hover { filter: brightness(1.1); }
+    .flagBox { display:flex; justify-content:center; align-items:center; padding:16px; background:#0f1730; border-radius:14px; border:1px solid #223055; }
+    img { width: min(460px, 95%); border-radius: 10px; background:white; }
+    .stats { display:flex; gap:12px; margin-top:10px; opacity:.9; flex-wrap: wrap; }
+    .pill { padding:6px 10px; background:#0b1220; border:1px solid #223055; border-radius:999px; font-size:14px; }
+    .msg { margin-top:10px; padding:10px 12px; border-radius:12px; border:1px solid #223055; background:#0b1220; }
+    .good { border-color:#2b7a4b; }
+    .bad { border-color:#7a2b2b; }
+    .muted { opacity:.85; }
+    .choices { display:grid; grid-template-columns: 1fr; gap:10px; margin-top:12px; }
+    @media (min-width: 640px){
+      .choices { grid-template-columns: 1fr 1fr; }
+    }
+    .choiceBtn { text-align:left; }
+    .small { font-size: 13px; opacity:.8; margin-top: 6px; }
+    .loading { opacity:.8; font-size:14px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>🏳️ Flag Trainer <span id="loadState" class="loading"></span></h1>
+
+      <div class="topRow">
+        <label>
+          <span class="small">Level</span><br />
+          <select id="levelSel">
+            <option value="easy">Easy (most common)</option>
+            <option value="medium">Medium</option>
+            <option value="hard">Hard</option>
+            <option value="all" selected>All</option>
+          </select>
+        </label>
+
+        <label>
+          <span class="small">Region</span><br />
+          <select id="regionSel">
+            <option value="World" selected>World</option>
+            <option value="Africa">Africa</option>
+            <option value="Americas">Americas</option>
+            <option value="Asia">Asia</option>
+            <option value="Europe">Europe</option>
+            <option value="Oceania">Oceania</option>
+          </select>
+        </label>
+
+        <button id="nextBtn">Next</button>
+        <button id="hintBtn">Hint</button>
+        <button id="revealBtn">Reveal</button>
+        <button id="resetBtn" title="Reset score/stats">Reset</button>
+      </div>
+
+      <div class="flagBox">
+        <img id="flagImg" alt="Flag" />
+      </div>
+
+      <div id="choices" class="choices"></div>
+
+      <div class="stats">
+        <div class="pill">Score: <span id="score">0</span></div>
+        <div class="pill">Streak: <span id="streak">0</span></div>
+        <div class="pill">Seen: <span id="seen">0</span></div>
+        <div class="pill">Accuracy: <span id="acc">0%</span></div>
+      </div>
+
+      <div id="msg" class="msg muted">Press “Next” to start.</div>
+      <div class="small muted">Tip: After the first load, your phone will cache the country list.</div>
+    </div>
+  </div>
+
+<script>
+  // ---------- Helpers ----------
+  const el = (id) => document.getElementById(id);
+  const flagImg = el("flagImg");
+  const msg = el("msg");
+  const choicesWrap = el("choices");
+  const scoreEl = el("score");
+  const streakEl = el("streak");
+  const seenEl = el("seen");
+  const accEl = el("acc");
+  const loadState = el("loadState");
+
+  function normalize(s){
+    return (s || "").trim().toLowerCase().replace(/\s+/g, " ").replace(/[’']/g, "'");
+  }
+  function setMessage(text, kind="muted"){
+    msg.className = "msg " + kind;
+    msg.textContent = text;
+  }
+  function shuffle(arr){
+    const a = arr.slice();
+    for (let i=a.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+  function sample(arr){
+    return arr[Math.floor(Math.random() * arr.length)];
+  }
+  function updateStats(){
+    scoreEl.textContent = state.score;
+    streakEl.textContent = state.streak;
+    seenEl.textContent = state.seen;
+    const pct = state.seen ? Math.round((state.correct/state.seen)*100) : 0;
+    accEl.textContent = pct + "%";
+  }
+  function flagUrl(code){
+    return `https://flagcdn.com/w320/${code}.png`;
+  }
+
+  // ---------- Levels (you can tweak these anytime) ----------
+  // Easy = very common countries (starter list)
+  const EASY_CODES = new Set([
+    "us","ca","mx","br","ar","cl","co","pe","ve",
+    "gb","fr","de","it","es","pt","nl","be","ch","at","se","no","dk","fi","ie","pl","ua","ru","gr",
+    "tr","sa","ae","qa","kw","eg","ma","za","ng","ke","et","gh",
+    "in","pk","bd","lk","np",
+    "cn","jp","kr","vn","th","my","sg","id","ph",
+    "au","nz",
+    "il","ir","iq","sy","jo","lb"
+  ]);
+
+  // Hard = smaller / less common (starter list). If a country isn't easy or hard, it becomes Medium.
+  const HARD_CODES = new Set([
+    "ad","ag","ai","aw","bb","bf","bi","bj","bn","bt","bw","bz","cc","ck","cv","cx","dj","dm","er","fm",
+    "fo","gd","gg","gi","gl","gm","gn","gq","gs","gu","gw","gy","hm","im","io","je","km","kn","ky","la",
+    "lc","li","lr","ls","lu","mc","md","mh","ml","mo","mp","mr","ms","mt","mu","mv","mw","na","nc","ne",
+    "nf","nu","pa","pf","pg","pm","pn","pr","pw","re","rw","sb","sc","sd","sh","sj","sl","sm","sn","so",
+    "sr","st","sz","tc","td","tf","tg","tk","tl","tm","tn","to","tt","tv","tz","ug","uy","va","vc","vg",
+    "vi","vu","wf","ws","ye","zm","zw"
+  ]);
+
+  // ---------- App State ----------
+  const state = {
+    countries: [],     // full list from API
+    pool: [],          // filtered by level + region
+    current: null,     // current country object
+    options: [],       // 4 choices
+    locked: false,     // prevent double clicks
+    score: 0,
+    streak: 0,
+    seen: 0,
+    correct: 0
+  };
+
+  // ---------- Load 200+ countries (Rest Countries API) ----------
+  // Cached in localStorage for speed.
+  const CACHE_KEY = "flagTrainer_countries_v1";
+  const CACHE_TIME_KEY = "flagTrainer_countries_time_v1";
+  const ONE_WEEK = 7 * 24 * 60 * 60 * 1000;
+
+  async function loadCountries(){
+    loadState.textContent = "Loading country list…";
+    // Try cache
+    try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      const t = Number(localStorage.getItem(CACHE_TIME_KEY) || "0");
+      if (cached && (Date.now() - t) < ONE_WEEK){
+        state.countries = JSON.parse(cached);
+        loadState.textContent = `Loaded ${state.countries.length} flags ✅`;
+        return;
+      }
+    } catch(e){ /* ignore cache errors */ }
+
+    // Fetch fresh
+    try {
+      const url = "https://restcountries.com/v3.1/all?fields=name,cca2,region,flags";
+      const res = await fetch(url);
+      if(!res.ok) throw new Error("Network response not OK");
+      const data = await res.json();
+
+      // Normalize
+      const cleaned = data
+        .filter(x => x?.cca2 && x?.name?.common && x?.flags)
+        .map(x => ({
+          name: x.name.common,
+          code: String(x.cca2).toLowerCase(), // matches FlagCDN
+          region: x.region || "World"
+        }))
+        // remove odd codes that won't match FlagCDN well (rare)
+        .filter(x => /^[a-z]{2}$/.test(x.code));
+
+      state.countries = cleaned;
+
+      // Save cache
+      try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify(cleaned));
+        localStorage.setItem(CACHE_TIME_KEY, String(Date.now()));
+      } catch(e){ /* ignore */ }
+
+      loadState.textContent = `Loaded ${state.countries.length} flags ✅`;
+    } catch(err){
+      // Fallback if offline
+      loadState.textContent = "Offline mode (small list)";
+      state.countries = [
+        { name:"United States", code:"us", region:"Americas" },
+        { name:"Canada", code:"ca", region:"Americas" },
+        { name:"Brazil", code:"br", region:"Americas" },
+        { name:"Japan", code:"jp", region:"Asia" },
+        { name:"South Korea", code:"kr", region:"Asia" },
+        { name:"Thailand", code:"th", region:"Asia" },
+        { name:"Pakistan", code:"pk", region:"Asia" },
+        { name:"United Kingdom", code:"gb", region:"Europe" },
+        { name:"France", code:"fr", region:"Europe" },
+        { name:"Germany", code:"de", region:"Europe" },
+        { name:"Haiti", code:"ht", region:"Americas" },
+        { name:"Dominican Republic", code:"do", region:"Americas" }
+      ];
+    }
+  }
+
+  // ---------- Filter pool by Level + Region ----------
+  function rebuildPool(){
+    const level = el("levelSel").value;
+    const region = el("regionSel").value;
+
+    let list = state.countries.slice();
+
+    if (region !== "World"){
+      list = list.filter(c => c.region === region);
+    }
+
+    if (level === "easy"){
+      list = list.filter(c => EASY_CODES.has(c.code));
+    } else if (level === "hard"){
+      list = list.filter(c => HARD_CODES.has(c.code));
+    } else if (level === "medium"){
+      list = list.filter(c => !EASY_CODES.has(c.code) && !HARD_CODES.has(c.code));
+    } // "all" keeps everything
+
+    // If filter gets too small, loosen it automatically
+    if (list.length < 8){
+      list = (region === "World") ? state.countries.slice() : state.countries.filter(c => c.region === region);
+      setMessage("Not enough flags in that filter — using a bigger pool.", "muted");
+    }
+
+    state.pool = list;
+  }
+
+  // ---------- Question generation (Multiple Choice) ----------
+  function makeQuestion(){
+    state.locked = false;
+    rebuildPool();
+
+    state.current = sample(state.pool);
+    flagImg.src = flagUrl(state.current.code);
+
+    // Build 3 distractors from same region if possible, else from world
+    const region = el("regionSel").value;
+    let distractFrom = state.countries;
+    if (region !== "World"){
+      const sameRegion = state.countries.filter(c => c.region === region);
+      if (sameRegion.length >= 12) distractFrom = sameRegion;
+    }
+
+    const distractors = [];
+    const used = new Set([state.current.code]);
+    while (distractors.length < 3){
+      const c = sample(distractFrom);
+      if (!used.has(c.code)){
+        used.add(c.code);
+        distractors.push(c);
+      }
+    }
+
+    state.options = shuffle([state.current, ...distractors]);
+    renderChoices();
+    setMessage("Pick the correct country.", "muted");
+  }
+
+  function renderChoices(){
+    choicesWrap.innerHTML = "";
+    state.options.forEach(opt => {
+      const b = document.createElement("button");
+      b.className = "choiceBtn";
+      b.textContent = opt.name;
+      b.onclick = () => choose(opt);
+      choicesWrap.appendChild(b);
+    });
+  }
+
+  function choose(opt){
+    if (!state.current || state.locked) return;
+    state.locked = true;
+
+    state.seen++;
+    const isCorrect = normalize(opt.name) === normalize(state.current.name);
+
+    if (isCorrect){
+      state.correct++;
+      state.score += 10;
+      state.streak += 1;
+      setMessage("✅ Correct!", "good");
+      updateStats();
+      setTimeout(makeQuestion, 650);
+    } else {
+      state.score = Math.max(0, state.score - 3);
+      state.streak = 0;
+      setMessage(`❌ Wrong. Correct answer: ${state.current.name}`, "bad");
+      updateStats();
+      state.locked = false; // allow another click OR Next
+    }
+  }
+
+  // ---------- Buttons ----------
+  el("nextBtn").addEventListener("click", () => {
+    if (!state.countries.length){
+      setMessage("Loading flags… try again in a second.", "muted");
+      return;
+    }
+    makeQuestion();
+  });
+
+  el("hintBtn").addEventListener("click", () => {
+    if(!state.current) return setMessage("Press Next first.", "muted");
+    const name = state.current.name;
+    const first = name[0]?.toUpperCase() || "";
+    setMessage(`Hint: Starts with “${first}” • ${name.length} letters`, "muted");
+  });
+
+  el("revealBtn").addEventListener("click", () => {
+    if(!state.current) return setMessage("Press Next first.", "muted");
+    setMessage(`Answer: ${state.current.name}`, "muted");
+  });
+
+  el("resetBtn").addEventListener("click", () => {
+    state.score = 0; state.streak = 0; state.seen = 0; state.correct = 0;
+    updateStats();
+    setMessage("Reset done. Press Next.", "muted");
+  });
+
+  el("levelSel").addEventListener("change", () => {
+    setMessage("Level changed. Press Next.", "muted");
+  });
+  el("regionSel").addEventListener("change", () => {
+    setMessage("Region changed. Press Next.", "muted");
+  });
+
+  // ---------- Init ----------
+  updateStats();
+  (async () => {
+    await loadCountries();
+    rebuildPool();
+    setMessage("Ready. Press Next to start!", "muted");
+  })();
+</script>
+</body>
+</html>
