@@ -3,85 +3,162 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Learning Apps • Countries</title>
-
-  <!-- CSS -->
+  <title>Learning Apps</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
-
 <body>
 
-  <!-- HEADER -->
-  <header class="topbar">
-    <div class="title">
-      <h1>Learning apps</h1>
-      <p class="sub">Country • Capital • Flag • Language • Continent</p>
+  <!-- LOADING / SPLASH -->
+  <section id="screen-loading" class="screen active center">
+    <div class="logo">🌟</div>
+    <h1>Learning Apps</h1>
+    <p class="muted">Loading...</p>
+    <div class="spinner" aria-hidden="true"></div>
+  </section>
+
+  <!-- WELCOME -->
+  <section id="screen-welcome" class="screen center">
+    <div class="card big">
+      <h2>Welcome!</h2>
+      <p class="muted">Learn Countries • Capitals • Flags • Languages • Continents</p>
+
+      <button id="btn-start" class="btn primary">Start</button>
+      <button id="btn-settings-open-1" class="btn ghost">⚙️ Settings</button>
+    </div>
+  </section>
+
+  <!-- CHARACTER PICK -->
+  <section id="screen-character" class="screen">
+    <header class="topbar">
+      <div>
+        <h2>Choose Your Character</h2>
+        <p class="muted">You can change this anytime in Settings.</p>
+      </div>
+      <button id="btn-settings-open-2" class="iconBtn" aria-label="Settings">⚙️</button>
+    </header>
+
+    <div class="grid">
+      <button class="char" data-char="Explorer">🧭 <span>Explorer</span></button>
+      <button class="char" data-char="Wizard">🧙‍♂️ <span>Wizard</span></button>
+      <button class="char" data-char="Ninja">🥷 <span>Ninja</span></button>
+      <button class="char" data-char="Princess">👸 <span>Princess</span></button>
+      <button class="char" data-char="Robot">🤖 <span>Robot</span></button>
+      <button class="char" data-char="Superhero">🦸‍♀️ <span>Superhero</span></button>
     </div>
 
-    <div class="stats">
-      <div class="stat">
-        <span class="label">Points</span>
-        <span id="points" class="value">0</span>
-      </div>
-      <div class="stat">
-        <span class="label">Streak</span>
-        <span id="streak" class="value">0</span>
-      </div>
-      <div class="stat">
-        <span class="label">Daily</span>
-        <span id="daily" class="value">0/5</span>
-      </div>
+    <div class="footerRow">
+      <button id="btn-character-back" class="btn ghost">Back</button>
     </div>
-  </header>
+  </section>
 
-  <!-- NAV -->
-  <nav class="tabs">
-    <button class="tab active" data-tab="learn">Learn</button>
-    <button class="tab" data-tab="quiz">Quiz</button>
-    <button class="tab" data-tab="progress">Progress</button>
-    <button class="tab" data-tab="settings">Settings</button>
-  </nav>
-
-  <!-- MAIN -->
-  <main class="container">
-
-    <!-- LEARN -->
-    <section id="tab-learn" class="panel active">
-      <h2>Learn</h2>
-      <div id="cards" class="cards"></div>
-    </section>
-
-    <!-- QUIZ -->
-    <section id="tab-quiz" class="panel">
-      <h2>Quiz</h2>
-      <div id="quiz-box" class="quiz">
-        <div id="quiz-prompt">Pick a mode to start</div>
-        <div id="quiz-choices" class="choices"></div>
-        <p id="quiz-feedback"></p>
+  <!-- HOME -->
+  <section id="screen-home" class="screen">
+    <header class="topbar">
+      <div class="profile">
+        <div class="avatar" id="avatar">🙂</div>
+        <div>
+          <h2 id="playerName">Player</h2>
+          <p class="muted">Character: <span id="characterName">—</span></p>
+        </div>
       </div>
-    </section>
 
-    <!-- PROGRESS -->
-    <section id="tab-progress" class="panel">
-      <h2>Progress</h2>
-      <p>
-        <span id="correct">0</span> correct /
-        <span id="total">0</span> total
-      </p>
-      <p id="accuracy">0%</p>
-    </section>
+      <button id="btn-settings-open-3" class="iconBtn" aria-label="Settings">⚙️</button>
+    </header>
 
-    <!-- SETTINGS -->
-    <section id="tab-settings" class="panel">
-      <h2>Settings</h2>
-      <p>More features coming soon</p>
-    </section>
+    <div class="statsRow">
+      <div class="pill">⭐ Points: <b id="points">0</b></div>
+      <div class="pill">🔥 Streak: <b id="streak">0</b></div>
+      <div class="pill">🎯 Daily: <b id="daily">0/5</b></div>
+    </div>
 
-  </main>
+    <div class="grid bigGrid">
+      <button id="go-learn" class="tile">📚<span>Learn</span><small>See cards</small></button>
+      <button id="go-quiz" class="tile">🎮<span>Quiz</span><small>Earn points</small></button>
+      <button id="go-progress" class="tile">📈<span>Progress</span><small>Accuracy</small></button>
+      <button id="go-characters" class="tile">🧑‍🎤<span>Characters</span><small>Pick again</small></button>
+    </div>
+  </section>
 
-  <!-- JS -->
+  <!-- LEARN -->
+  <section id="screen-learn" class="screen">
+    <header class="topbar">
+      <button class="iconBtn" data-back aria-label="Back">←</button>
+      <div>
+        <h2>Learn</h2>
+        <p class="muted">Tap and scroll</p>
+      </div>
+      <button id="btn-settings-open-4" class="iconBtn" aria-label="Settings">⚙️</button>
+    </header>
+    <div id="cards" class="cards"></div>
+  </section>
+
+  <!-- QUIZ -->
+  <section id="screen-quiz" class="screen">
+    <header class="topbar">
+      <button class="iconBtn" data-back aria-label="Back">←</button>
+      <div>
+        <h2>Quiz</h2>
+        <p class="muted">Choose a mode, then answer</p>
+      </div>
+      <button id="btn-settings-open-5" class="iconBtn" aria-label="Settings">⚙️</button>
+    </header>
+
+    <div class="card">
+      <div id="quiz-prompt" class="quizPrompt">Choose a quiz mode:</div>
+      <div id="quiz-choices" class="choices"></div>
+      <p id="quiz-feedback" class="muted"></p>
+    </div>
+  </section>
+
+  <!-- PROGRESS -->
+  <section id="screen-progress" class="screen">
+    <header class="topbar">
+      <button class="iconBtn" data-back aria-label="Back">←</button>
+      <div>
+        <h2>Progress</h2>
+        <p class="muted">How you’re doing</p>
+      </div>
+      <button id="btn-settings-open-6" class="iconBtn" aria-label="Settings">⚙️</button>
+    </header>
+
+    <div class="card">
+      <p><b id="correct">0</b> correct / <b id="total">0</b> total</p>
+      <p>Accuracy: <b id="accuracy">0%</b></p>
+    </div>
+  </section>
+
+  <!-- SETTINGS MODAL -->
+  <div id="settingsModal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modalCard">
+      <div class="modalTop">
+        <h3>Settings</h3>
+        <button id="btn-settings-close" class="iconBtn" aria-label="Close">✕</button>
+      </div>
+
+      <label class="field">
+        <span>Name</span>
+        <input id="nameInput" placeholder="Type a name" />
+      </label>
+
+      <label class="field">
+        <span>Daily goal</span>
+        <select id="dailyGoalSelect">
+          <option value="5">5</option>
+          <option value="10">10</option>
+          <option value="15">15</option>
+        </select>
+      </label>
+
+      <div class="row">
+        <button id="btn-reset" class="btn danger">Reset points</button>
+        <button id="btn-go-character" class="btn">Change character</button>
+      </div>
+
+      <button id="btn-settings-save" class="btn primary">Save</button>
+    </div>
+  </div>
+
   <script src="data.js"></script>
   <script src="app.js"></script>
-
 </body>
 </html>
