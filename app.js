@@ -1,5 +1,10 @@
-// ---------- STATE ----------
-const state = {
+// ---------- STORAGE ----------
+const KEY = "learningApp_v1";
+
+const defaultState = {
+  screen: "loading",
+  name: "Player",
+  character: null,
   points: 0,
   streak: 0,
   dailyCount: 0,
@@ -8,10 +13,38 @@ const state = {
   total: 0
 };
 
+let state = loadState();
 let currentQuiz = null;
 
-// ---------- HELPERS ----------
+function loadState(){
+  try{
+    const raw = localStorage.getItem(KEY);
+    if(!raw) return {...defaultState};
+    return { ...defaultState, ...JSON.parse(raw) };
+  }catch{
+    return {...defaultState};
+  }
+}
+function saveState(){ localStorage.setItem(KEY, JSON.stringify(state)); }
+
 function $(id){ return document.getElementById(id); }
+
+function show(screenId){
+  const map = {
+    loading:"screen-loading",
+    welcome:"screen-welcome",
+    character:"screen-character",
+    home:"screen-home",
+    learn:"screen-learn",
+    quiz:"screen-quiz",
+    progress:"screen-progress"
+  };
+  const target = map[screenId];
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+  document.getElementById(target).classList.add("active");
+  state.screen = screenId;
+  saveState();
+}
 
 function shuffle(arr){
   const a = [...arr];
@@ -21,49 +54,60 @@ function shuffle(arr){
   }
   return a;
 }
+function pickRandom(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 
-function pickRandom(arr){
-  return arr[Math.floor(Math.random()*arr.length)];
+function avatarEmojiFor(name){
+  const map = {
+    Explorer:"🧭",
+    Wizard:"🧙‍♂️",
+    Ninja:"🥷",
+    Princess:"👸",
+    Robot:"🤖",
+    Superhero:"🦸‍♀️"
+  };
+  return map[name] || "🙂";
 }
 
-function updateStats(){
+function updateUI(){
   $("points").textContent = String(state.points);
   $("streak").textContent = String(state.streak);
   $("daily").textContent = `${state.dailyCount}/${state.dailyGoal}`;
   $("correct").textContent = String(state.correct);
   $("total").textContent = String(state.total);
 
-  const acc = state.total === 0 ? 0 : Math.round((state.correct / state.total) * 100);
+  const acc = state.total === 0 ? 0 : Math.round((state.correct/state.total)*100);
   $("accuracy").textContent = `${acc}%`;
+
+  $("playerName").textContent = state.name || "Player";
+  $("characterName").textContent = state.character || "—";
+  $("avatar").textContent = avatarEmojiFor(state.character);
 }
 
-// ---------- TABS ----------
-function setupTabs(){
-  const tabs = document.querySelectorAll(".tab");
-  tabs.forEach(btn=>{
-    btn.addEventListener("click", ()=>{
-      tabs.forEach(t=>t.classList.remove("active"));
-      btn.classList.add("active");
-
-      document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
-      const tabName = btn.dataset.tab;
-      const panel = document.getElementById(`tab-${tabName}`);
-      if(panel) panel.classList.add("active");
-    });
-  });
+function openSettings(){
+  $("nameInput").value = state.name || "";
+  $("dailyGoalSelect").value = String(state.dailyGoal || 5);
+  $("settingsModal").classList.remove("hidden");
+}
+function closeSettings(){
+  $("settingsModal").classList.add("hidden");
+}
+function saveSettings(){
+  const name = $("nameInput").value.trim();
+  state.name = name ? name : "Player";
+  state.dailyGoal = Number($("dailyGoalSelect").value || 5);
+  if(state.dailyCount > state.dailyGoal) state.dailyCount = state.dailyGoal;
+  saveState();
+  updateUI();
+  closeSettings();
 }
 
-// ---------- LEARN CARDS ----------
+// ---------- LEARN ----------
 function renderLearnCards(){
   const root = $("cards");
-  if(!root) return;
-
   root.innerHTML = "";
-
   countries.forEach(c=>{
     const div = document.createElement("div");
     div.className = "card";
-
     div.innerHTML = `
       <div class="flag">${c.flag}</div>
       <h3>${c.country}</h3>
@@ -71,7 +115,6 @@ function renderLearnCards(){
       <p class="kv"><b>Language:</b> ${c.language}</p>
       <p class="kv"><b>Continent:</b> ${c.continent}</p>
     `;
-
     root.appendChild(div);
   });
 }
@@ -85,13 +128,10 @@ const QUIZ_MODES = [
 ];
 
 function renderQuizModeButtons(){
+  $("quiz-prompt").textContent = "Choose a quiz mode:";
+  $("quiz-feedback").textContent = "";
   const choices = $("quiz-choices");
-  const prompt = $("quiz-prompt");
-  if(!choices || !prompt) return;
-
-  prompt.textContent = "Choose a quiz mode:";
   choices.innerHTML = "";
-
   QUIZ_MODES.forEach(m=>{
     const b = document.createElement("button");
     b.className = "choice";
@@ -99,8 +139,6 @@ function renderQuizModeButtons(){
     b.addEventListener("click", ()=> startQuiz(m.key));
     choices.appendChild(b);
   });
-
-  $("quiz-feedback").textContent = "";
 }
 
 function buildQuestion(modeKey){
@@ -133,26 +171,12 @@ function buildQuestion(modeKey){
   if(modeKey === "country_to_continent"){
     const pool = shuffle([...new Set(countries.map(x=>x.continent))]);
     const wrong = shuffle(pool.filter(x=>x!==correct.continent)).slice(0,3);
-    return {
-      modeKey,
-      prompt: `Which continent is ${correct.country} in?`,
-      answer: correct.continent,
-      choices: shuffle([correct.continent, ...wrong])
-    };
+    return { modeKey, prompt:`Which continent is ${correct.country} in?`, answer:correct.continent, choices:shuffle([correct.continent,...wrong]) };
   }
 
-  if(modeKey === "country_to_language"){
-    const pool = shuffle([...new Set(countries.map(x=>x.language))]);
-    const wrong = shuffle(pool.filter(x=>x!==correct.language)).slice(0,3);
-    return {
-      modeKey,
-      prompt: `What language is most associated with ${correct.country}?`,
-      answer: correct.language,
-      choices: shuffle([correct.language, ...wrong])
-    };
-  }
-
-  return null;
+  const pool = shuffle([...new Set(countries.map(x=>x.language))]);
+  const wrong = shuffle(pool.filter(x=>x!==correct.language)).slice(0,3);
+  return { modeKey, prompt:`What language is most associated with ${correct.country}?`, answer:correct.language, choices:shuffle([correct.language,...wrong]) };
 }
 
 function startQuiz(modeKey){
@@ -161,14 +185,9 @@ function startQuiz(modeKey){
 }
 
 function renderQuizQuestion(){
+  $("quiz-prompt").textContent = currentQuiz.prompt;
+  $("quiz-feedback").textContent = "";
   const choicesEl = $("quiz-choices");
-  const promptEl = $("quiz-prompt");
-  const feedback = $("quiz-feedback");
-
-  if(!currentQuiz || !choicesEl || !promptEl) return;
-
-  promptEl.textContent = currentQuiz.prompt;
-  feedback.textContent = "";
   choicesEl.innerHTML = "";
 
   currentQuiz.choices.forEach(choice=>{
@@ -181,7 +200,6 @@ function renderQuizQuestion(){
 }
 
 function gradeAnswer(choice, btn){
-  const feedback = $("quiz-feedback");
   state.total += 1;
 
   const buttons = Array.from(document.querySelectorAll("#quiz-choices .choice"));
@@ -192,32 +210,94 @@ function gradeAnswer(choice, btn){
     state.correct += 1;
     state.streak += 1;
     state.points += 10;
-
-    // daily progress
     if(state.dailyCount < state.dailyGoal) state.dailyCount += 1;
-
-    feedback.textContent = `✅ Correct! +10 points`;
+    $("quiz-feedback").textContent = "✅ Correct! +10 points";
   } else {
     btn.classList.add("wrong");
     state.streak = 0;
-    feedback.textContent = `❌ Not quite. Correct: ${currentQuiz.answer}`;
+    $("quiz-feedback").textContent = `❌ Correct: ${currentQuiz.answer}`;
   }
 
-  updateStats();
+  saveState();
+  updateUI();
 
-  // next question after short pause
   setTimeout(()=>{
     currentQuiz = buildQuestion(currentQuiz.modeKey);
     renderQuizQuestion();
-  }, 800);
+  }, 700);
+}
+
+// ---------- NAV (HOME BUTTONS) ----------
+function setupNav(){
+  // Start flow
+  $("btn-start").addEventListener("click", ()=>{
+    if(state.character) show("home");
+    else show("character");
+  });
+
+  // character pick
+  document.querySelectorAll(".char").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      state.character = btn.dataset.char;
+      saveState();
+      updateUI();
+      show("home");
+    });
+  });
+  $("btn-character-back").addEventListener("click", ()=> show("welcome"));
+
+  // home tiles
+  $("go-learn").addEventListener("click", ()=> show("learn"));
+  $("go-quiz").addEventListener("click", ()=> { show("quiz"); renderQuizModeButtons(); });
+  $("go-progress").addEventListener("click", ()=> show("progress"));
+  $("go-characters").addEventListener("click", ()=> show("character"));
+
+  // back buttons
+  document.querySelectorAll("[data-back]").forEach(b=>{
+    b.addEventListener("click", ()=> show("home"));
+  });
+
+  // settings open buttons
+  ["btn-settings-open-1","btn-settings-open-2","btn-settings-open-3","btn-settings-open-4","btn-settings-open-5","btn-settings-open-6"]
+    .forEach(id => $(id).addEventListener("click", openSettings));
+
+  $("btn-settings-close").addEventListener("click", closeSettings);
+  $("btn-settings-save").addEventListener("click", saveSettings);
+
+  $("btn-go-character").addEventListener("click", ()=>{
+    closeSettings();
+    show("character");
+  });
+
+  $("btn-reset").addEventListener("click", ()=>{
+    state.points = 0;
+    state.streak = 0;
+    state.dailyCount = 0;
+    state.correct = 0;
+    state.total = 0;
+    saveState();
+    updateUI();
+    closeSettings();
+  });
+
+  // close modal if tap outside
+  $("settingsModal").addEventListener("click", (e)=>{
+    if(e.target.id === "settingsModal") closeSettings();
+  });
 }
 
 // ---------- INIT ----------
 function init(){
-  setupTabs();
+  updateUI();
   renderLearnCards();
-  renderQuizModeButtons();
-  updateStats();
+  setupNav();
+
+  // Splash screen for 1.2s, then go to welcome/home based on saved state
+  show("loading");
+  setTimeout(()=>{
+    if(state.character) show("home");
+    else show("welcome");
+  }, 1200);
 }
 
 document.addEventListener("DOMContentLoaded", init);
