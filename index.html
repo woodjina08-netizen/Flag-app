@@ -1,46 +1,123 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Learning Apps</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Learning Apps • Countries</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
-
 <body>
+  <header class="topbar">
+    <div class="title">
+      <h1>Learning apps</h1>
+      <p class="sub">Country • Capital • Flag • Language • Continent</p>
+    </div>
 
-<!-- LOADING SCREEN -->
-<section id="loading" class="screen active">
-  <div class="center">
-    <div class="logo">⭐</div>
-    <h1>Learning Apps</h1>
-    <p>Loading...</p>
-    <div class="spinner"></div>
-  </div>
-</section>
-
-<!-- WELCOME / START SCREEN -->
-<section id="welcome" class="screen">
-  <div class="center">
-    <h1>Welcome!</h1>
-    <p>Learn Countries, Flags, Capitals & More</p>
-
-    <button id="startBtn" class="primary">Start</button>
-    <button id="settingsBtn" class="secondary">Settings</button>
-  </div>
-</section>
-
-<!-- HOME SCREEN -->
-<section id="home" class="screen">
-  <header class="top">
-    <h2>Learning Apps</h2>
+    <div class="stats">
+      <div class="stat">
+        <span class="label">Points</span>
+        <span id="points" class="value">0</span>
+      </div>
+      <div class="stat">
+        <span class="label">Streak</span>
+        <span id="streak" class="value">0</span>
+      </div>
+      <div class="stat">
+        <span class="label">Daily</span>
+        <span id="daily" class="value">0/5</span>
+      </div>
+    </div>
   </header>
 
-  <main class="content">
-    <p>This is where lessons, characters, quizzes go next.</p>
-  </main>
-</section>
+  <nav class="tabs">
+    <button class="tab active" data-tab="learn">Learn</button>
+    <button class="tab" data-tab="quiz">Quiz</button>
+    <button class="tab" data-tab="progress">Progress</button>
+    <button class="tab" data-tab="settings">Settings</button>
+  </nav>
 
-<script src="app.js"></script>
+  <main class="container">
+    <!-- LEARN -->
+    <section id="tab-learn" class="panel active">
+      <div class="panel-head">
+        <h2>Learn</h2>
+        <div class="row">
+          <button id="btn-random-card" class="btn">Random country</button>
+          <input id="search" class="input" placeholder="Search country…" />
+        </div>
+      </div>
+
+      <div id="cards" class="cards"></div>
+    </section>
+
+    <!-- QUIZ -->
+    <section id="tab-quiz" class="panel">
+      <div class="panel-head">
+        <h2>Quiz</h2>
+        <p class="hint">Choose a mode and earn points ⭐</p>
+        <div class="row">
+          <button class="btn" id="mode-flag">Flag → Country</button>
+          <button class="btn" id="mode-capital">Country → Capital</button>
+        </div>
+      </div>
+
+      <div id="quiz-box" class="quiz">
+        <div id="quiz-prompt" class="quiz-prompt">Pick a mode to start.</div>
+        <div id="quiz-choices" class="choices"></div>
+        <div class="row space">
+          <button id="btn-skip" class="btn ghost" disabled>Skip</button>
+          <button id="btn-next" class="btn" disabled>Next</button>
+        </div>
+        <div id="quiz-feedback" class="feedback"></div>
+      </div>
+    </section>
+
+    <!-- PROGRESS -->
+    <section id="tab-progress" class="panel">
+      <div class="panel-head">
+        <h2>Progress</h2>
+        <p class="hint">Saved on your device.</p>
+      </div>
+
+      <div class="progress-grid">
+        <div class="box">
+          <h3>Weekly test</h3>
+          <p id="weekly-status">Not started</p>
+          <button id="btn-weekly" class="btn">Start weekly test (10 Q)</button>
+        </div>
+
+        <div class="box">
+          <h3>Accuracy</h3>
+          <p><span id="correct">0</span> correct / <span id="total">0</span> total</p>
+          <p id="accuracy">0%</p>
+        </div>
+
+        <div class="box">
+          <h3>Badges</h3>
+          <ul id="badges" class="badges"></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section id="tab-settings" class="panel">
+      <div class="panel-head">
+        <h2>Settings</h2>
+        <p class="hint">Kid-friendly defaults.</p>
+      </div>
+
+      <div class="box">
+        <label class="label">Daily goal (questions)</label>
+        <input id="daily-goal" class="input" type="number" min="1" max="50" value="5" />
+        <div class="row space">
+          <button id="btn-save-settings" class="btn">Save</button>
+          <button id="btn-reset" class="btn danger">Reset all data</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
